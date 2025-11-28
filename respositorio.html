@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Repositorio Biblioteca — Con Autenticación</title>
+  <style>
+    :root{--bg:#f7f6f3;--card:#ffffff;--muted:#6b7280;--accent:#2563eb}
+    *{box-sizing:border-box}
+    body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial; margin:0;background:var(--bg); color:#111}
+    .center{max-width:1100px;margin:22px auto;padding:0 18px}
+    header{background:linear-gradient(90deg,#fff 0,#f1f5f9 100%);padding:12px 18px;display:flex;gap:12px;align-items:center;justify-content:space-between}
+    .brand{display:flex;gap:12px;align-items:center}
+    .logo{width:44px;height:44px;border-radius:8px;background:linear-gradient(135deg,#34d399,#60a5fa);display:flex;align-items:center;justify-content:center;color:white;font-weight:700}
+    h1{font-size:18px;margin:0}
+    .muted{color:var(--muted)}
+    .card{background:var(--card);border-radius:10px;padding:16px;box-shadow:0 6px 18px rgba(17,24,39,0.06)}
+    label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+    input[type=text], input[type=password], select, textarea{width:100%;padding:8px 10px;border:1px solid #e6e9ef;border-radius:8px;font-size:14px}
+    button{background:var(--accent);color:white;border:none;padding:10px 12px;border-radius:8px;cursor:pointer}
+    .small{padding:6px 10px;font-size:13px}
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .topbar{display:flex;justify-content:space-between;gap:12px;align-items:center}
+    .list{margin-top:14px;display:grid;gap:10px}
+    .item{display:flex;gap:12px;align-items:flex-start;padding:12px;border-radius:10px;border:1px solid #edf2f7}
+    .thumb{width:72px;height:56px;border-radius:6px;background:#eef2ff;display:flex;align-items:center;justify-content:center;color:#374151;font-size:12px}
+    .actions{margin-left:auto;display:flex;gap:8px}
+    .tag{font-size:12px;padding:4px 6px;border-radius:6px;background:#eef2ff;color:#1e3a8a}
+    footer{max-width:1100px;margin:18px auto;padding:8px 18px;color:var(--muted);font-size:13px}
+    @media (max-width:900px){.grid-2{grid-template-columns:1fr} .topbar{flex-direction:column;align-items:stretch}}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="logo">SL</div>
+      <div>
+        <h1>Repositorio — Biblioteca de clases (Autenticado)</h1>
+        <div class="muted">Acceso controlado: regístrate o inicia sesión para ver el contenido</div>
+      </div>
+    </div>
+    <div id="userArea" class="muted"> </div>
+  </header>
+
+  <main class="center">
+    <!-- Login / Register panel (se muestra si no hay sesión) -->
+    <div id="authPanel" class="card" style="margin-bottom:14px">
+      <div id="authContent">
+        <h3>Acceso al repositorio</h3>
+        <div class="grid-2" style="margin-top:8px">
+          <div>
+            <label>Iniciar sesión</label>
+            <input type="text" id="loginUser" placeholder="Usuario" />
+            <input type="password" id="loginPass" placeholder="Contraseña" style="margin-top:8px" />
+            <div style="margin-top:8px;display:flex;gap:8px">
+              <button id="btnLogin">Entrar</button>
+              <button id="btnShowRegister" class="small">Registrar cuenta</button>
+            </div>
+          </div>
+          <div>
+            <label>Registro rápido</label>
+            <input type="text" id="regUser" placeholder="Usuario" />
+            <input type="password" id="regPass" placeholder="Contraseña" style="margin-top:8px" />
+            <select id="regRole" style="margin-top:8px"><option value="user">Usuario</option><option value="admin">Administrador</option></select>
+            <div style="margin-top:8px;display:flex;gap:8px">
+              <button id="btnRegister">Registrar</button>
+              <button id="btnCancelRegister" class="small" style="display:none">Cancelar</button>
+            </div>
+          </div>
+        </div>
+        <p class="muted" style="margin-top:8px">Nota: En producción la creación de administradores debe estar restringida y verificarse fuera del cliente.</p>
+      </div>
+    </div>
+
+    <!-- Admin panel para gestionar usuarios (solo para administradores) -->
+    <div id="adminPanel" class="card" style="display:none;margin-bottom:14px">
+      <h3>Panel de administración — Usuarios</h3>
+      <div style="margin-top:10px">
+        <div style="display:flex;gap:8px;align-items:center">
+          <label style="width:110px">Nuevo usuario</label>
+          <input id="adminNewUser" placeholder="usuario" />
+          <input id="adminNewPass" placeholder="contraseña" />
+          <select id="adminNewRole"><option value="user">Usuario</option><option value="admin">Admin</option></select>
+          <button id="adminAddUser" class="small">Agregar</button>
+        </div>
+      </div>
+      <div id="adminUserList" style="margin-top:12px"></div>
+    </div>
+
+    <!-- Upload y filtros (solo para usuarios autenticados) -->
+    <div id="mainApp" style="display:none">
+      <div class="card">
+        <div class="topbar">
+          <div style="flex:1">
+            <h3>Subir archivo con metadatos</h3>
+            <form id="uploadForm">
+              <div style="display:grid;grid-template-columns:1fr 160px;gap:8px;align-items:start">
+                <div>
+                  <label>Título</label>
+                  <input id="title" placeholder="Ej: Clase 01 — Introducción" required />
+                </div>
+                <div>
+                  <label>Año</label>
+                  <select id="yearSelect"></select>
+                </div>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+                <div>
+                  <label>Curso</label>
+                  <input id="course" placeholder="Ej: Álgebra I" />
+                </div>
+                <div>
+                  <label>Profesor encargado</label>
+                  <input id="professor" placeholder="Nombre del profesor" />
+                </div>
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+                <div>
+                  <label>Grado</label>
+                  <input id="grade" placeholder="Ej: 1° Secundaria" />
+                </div>
+                <div>
+                  <label>Etiquetas (palabras clave separadas por coma)</label>
+                  <input id="tags" placeholder="ej: unidad1,tema2" />
+                </div>
+              </div>
+
+              <div style="margin-top:8px">
+                <label>Descripción</label>
+                <textarea id="desc" rows="2"></textarea>
+              </div>
+
+              <div style="margin-top:8px;display:flex;gap:8px;align-items:center">
+                <div style="flex:1">
+                  <label>Archivo</label>
+                  <input type="file" id="file" required />
+                </div>
+                <div style="width:170px">
+                  <label>Visibilidad</label>
+                  <select id="visibility"><option value="private">Privado (solo usuarios)</option><option value="public">Público</option></select>
+                </div>
+              </div>
+
+              <div style="margin-top:10px;display:flex;gap:8px">
+                <button type="submit">Subir archivo</button>
+                <button type="button" id="clearBtn" class="small">Limpiar</button>
+                <div class="muted" style="margin-left:auto">Subido por: <strong id="uploadedBy"></strong></div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <div style="display:flex;gap:8px;align-items:center">
+          <div style="flex:1">
+            <input id="search" placeholder="Buscar por título, curso, profesor, etiquetas, archivo..." />
+          </div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select id="filterYear"><option value="all">Todos los años</option></select>
+            <select id="filterCourse"><option value="">Todos los cursos</option></select>
+            <select id="filterProfessor"><option value="">Todos los profesores</option></select>
+            <select id="filterGrade"><option value="">Todos los grados</option></select>
+            <select id="sortBy"><option value="newest">Más recientes</option><option value="oldest">Más antiguos</option><option value="title">Título A→Z</option></select>
+            <select id="perPage"><option>8</option><option>16</option><option>32</option></select>
+            <button id="btnLogout" class="small">Cerrar sesión</button>
+          </div>
+        </div>
+
+        <div class="list" id="list"></div>
+
+        <div style="display:flex;justify-content:center;margin-top:12px;gap:8px;align-items:center">
+          <button id="prevPage" class="small">Anterior</button>
+          <div class="muted">Página <span id="page">1</span></div>
+          <button id="nextPage" class="small">Siguiente</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer>Prototipo: almacenamiento en IndexedDB. Para producción: usar backend seguro, encriptación y gestión de usuarios centralizada.</footer>
+
+  <script>
+    // --- DB & Auth simples en IndexedDB ---
+    const DB_NAME = 'repositorio-lib-auth'; const DB_VERSION = 1; let db;
+    async function openDB(){
+      return new Promise((res,rej)=>{
+        const req = indexedDB.open(DB_NAME,DB_VERSION);
+        req.onupgradeneeded = e => {
+          const idb = e.target.result;
+          if(!idb.objectStoreNames.contains('files')){
+            const store = idb.createObjectStore('files',{keyPath:'id',autoIncrement:true});
+            store.createIndex('title','title'); store.createIndex('year','year'); store.createIndex('course','course'); store.createIndex('professor','professor'); store.createIndex('grade','grade'); store.createIndex('tags','tags',{multiEntry:true}); store.createIndex('createdAt','createdAt');
+          }
+          if(!idb.objectStoreNames.contains('users')){
+            const u = idb.createObjectStore('users',{keyPath:'username'});
+            // password stored in plain text in this prototype: NOT for production
+            u.createIndex('role','role');
+          }
+        };
+        req.onsuccess = e => { db = e.target.result; res(db); };
+        req.onerror = e => rej(e.target.error);
+      });
+    }
+
+    function addUser(user){ return new Promise((res,rej)=>{ const tx=db.transaction('users','readwrite'); const s=tx.objectStore('users'); const req=s.add(user); req.onsuccess=()=>res(); req.onerror=e=>rej(e.target.error); }); }
+    function putUser(user){ return new Promise((res,rej)=>{ const tx=db.transaction('users','readwrite'); const s=tx.objectStore('users'); const req=s.put(user); req.onsuccess=()=>res(); req.onerror=e=>rej(e.target.error); }); }
+    function getUser(username){ return new Promise((res,rej)=>{ const tx=db.transaction('users','readonly'); const s=tx.objectStore('users'); const req=s.get(username); req.onsuccess=()=>res(req.result); req.onerror=e=>rej(e.target.error); }); }
+    function getAllUsers(){ return new Promise((res,rej)=>{ const tx=db.transaction('users','readonly'); const s=tx.objectStore('users'); const req=s.getAll(); req.onsuccess=()=>res(req.result); req.onerror=e=>rej(e.target.error); }); }
+
+    function addFile(record){ return new Promise((res,rej)=>{ const tx=db.transaction('files','readwrite'); const s=tx.objectStore('files'); const req=s.add(record); req.onsuccess=()=>res(req.result); req.onerror=e=>rej(e.target.error); }); }
+    function getAllFiles(){ return new Promise((res,rej)=>{ const tx=db.transaction('files','readonly'); const s=tx.objectStore('files'); const req=s.getAll(); req.onsuccess=()=>res(req.result); req.onerror=e=>rej(e.target.error); }); }
+    function getFile(id){ return new Promise((res,rej)=>{ const tx=db.transaction('files','readonly'); const s=tx.objectStore('files'); const req=s.get(Number(id)); req.onsuccess=()=>res(req.result); req.onerror=e=>rej(e.target.error); }); }
+    function delFile(id){ return new Promise((res,rej)=>{ const tx=db.transaction('files','readwrite'); const s=tx.objectStore('files'); const req=s.delete(Number(id)); req.onsuccess=()=>res(); req.onerror=e=>rej(e.target.error); }); }
+
+    // --- UI state ---
+    let state={items:[],filtered:[],page:1,perPage:8,filters:{year:'all',course:'',professor:'',grade:'',q:''},sort:'newest',user:null};
+
+    // --- helpers ---
+    function hashPass(p){ // simple hash placeholder (NOT secure)
+      let h=0; for(let i=0;i<p.length;i++){ h = ((h<<5)-h)+p.charCodeAt(i); h |= 0; } return String(h);
+    }
+
+    function detectType(filename,mime){ if(mime){ if(mime.startsWith('video/')) return 'video'; if(mime.startsWith('audio/')) return 'audio'; if(mime==='application/pdf') return 'pdf'; if(mime.startsWith('image/')) return 'image'; } const ext=filename.split('.').pop().toLowerCase(); if(['mp4','webm','mkv','mov'].includes(ext)) return 'video'; if(['mp3','wav','ogg'].includes(ext)) return 'audio'; if(['pdf'].includes(ext)) return 'pdf'; if(['png','jpg','jpeg','gif','svg'].includes(ext)) return 'image'; return 'other'; }
+
+    // --- render users in admin panel ---
+    async function renderAdminUsers(){ const list = document.getElementById('adminUserList'); list.innerHTML=''; const users = await getAllUsers(); if(!users.length) return list.innerHTML='<div class="muted">No hay usuarios</div>';
+      users.forEach(u=>{ const div=document.createElement('div'); div.style.display='flex'; div.style.gap='8px'; div.style.alignItems='center'; div.style.padding='6px 0'; div.innerHTML=`<div style="width:200px"><strong>${u.username}</strong> <span class="muted">(${u.role})</span></div>`;
+        const btn=document.createElement('button'); btn.textContent='Eliminar'; btn.className='small'; btn.onclick=async ()=>{ if(!confirm('Eliminar usuario?')) return; const tx=db.transaction('users','readwrite'); tx.objectStore('users').delete(u.username); tx.oncomplete=()=>renderAdminUsers(); };
+        div.appendChild(btn); list.appendChild(div);
+      }); }
+
+    // --- upload handling ---
+    document.getElementById('uploadForm').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const f = document.getElementById('file').files[0]; if(!f) return alert('Seleccione un archivo');
+      const title = document.getElementById('title').value.trim() || f.name;
+      const year = document.getElementById('yearSelect').value;
+      const course = document.getElementById('course').value.trim();
+      const professor = document.getElementById('professor').value.trim();
+      const grade = document.getElementById('grade').value.trim();
+      const tags = document.getElementById('tags').value.split(',').map(s=>s.trim()).filter(Boolean);
+      const desc = document.getElementById('desc').value.trim();
+      const visibility = document.getElementById('visibility').value;
+      const reader = new FileReader();
+      reader.onload = async ()=>{
+        const blob = new Blob([reader.result],{type:f.type||'application/octet-stream'});
+        const rec = {title,desc,filename:f.name,tags,year,course,professor,grade,visibility,uploadedBy:state.user.username,type:detectType(f.name,f.type),createdAt:Date.now(),blob};
+        await addFile(rec);
+        await refreshFiles();
+        document.getElementById('uploadForm').reset();
+      };
+      reader.readAsArrayBuffer(f);
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', ()=>document.getElementById('uploadForm').reset());
+
+    // --- auth actions ---
+    document.getElementById('btnRegister').addEventListener('click', async ()=>{
+      const u=document.getElementById('regUser').value.trim(); const p=document.getElementById('regPass').value; const r=document.getElementById('regRole').value;
+      if(!u||!p) return alert('Usuario y contraseña requeridos');
+      const exists = await getUser(u);
+      if(exists) return alert('Usuario ya existe');
+      // store hashed pass (simple)
+      await addUser({username:u,password:hashPass(p),role:r});
+      alert('Registrado correctamente'); document.getElementById('regUser').value=''; document.getElementById('regPass').value=''; await renderAdminUsers();
+    });
+
+    document.getElementById('btnLogin').addEventListener('click', async ()=>{
+      const u=document.getElementById('loginUser').value.trim(); const p=document.getElementById('loginPass').value;
+      if(!u||!p) return alert('Ingrese credenciales');
+      const rec = await getUser(u);
+      if(!rec || rec.password !== hashPass(p)) return alert('Credenciales inválidas');
+      // set session
+      state.user = {username:rec.username,role:rec.role}; localStorage.setItem('repo_session',JSON.stringify(state.user));
+      afterLogin();
+    });
+
+    document.getElementById('btnLogout').addEventListener('click', ()=>{ localStorage.removeItem('repo_session'); location.reload(); });
+
+    // admin add user from admin panel
+    document.getElementById('adminAddUser').addEventListener('click', async ()=>{
+      const u=document.getElementById('adminNewUser').value.trim(); const p=document.getElementById('adminNewPass').value; const r=document.getElementById('adminNewRole').value;
+      if(!u||!p) return alert('Ingrese usuario y contraseña'); const exists=await getUser(u); if(exists) return alert('Usuario ya existe'); await addUser({username:u,password:hashPass(p),role:r}); document.getElementById('adminNewUser').value=''; document.getElementById('adminNewPass').value=''; renderAdminUsers();
+    });
+
+    // show/hide register (simple UX toggle)
+    document.getElementById('btnShowRegister').addEventListener('click', ()=>{ document.getElementById('regUser').focus(); document.getElementById('btnCancelRegister').style.display='inline-block'; });
+    document.getElementById('btnCancelRegister').addEventListener('click', ()=>{ document.getElementById('regUser').value=''; document.getElementById('regPass').value=''; document.getElementById('btnCancelRegister').style.display='none'; });
+
+    // --- file listing, filtering, search ---
+    async function refreshFiles(){ const all = await getAllFiles(); state.items = all.sort((a,b)=>b.createdAt-a.createdAt); applyFilters(); populateFilters(); }
+
+    function applyFilters(){ const f=state.filters; let out = state.items.slice(); if(f.year && f.year!=='all') out = out.filter(i=>String(i.year)===String(f.year)); if(f.course) out = out.filter(i=>i.course===f.course); if(f.professor) out = out.filter(i=>i.professor===f.professor); if(f.grade) out = out.filter(i=>i.grade===f.grade); if(f.q){const q=f.q.toLowerCase(); out = out.filter(i=>[i.title,i.desc,i.filename,i.course,i.professor,(i.tags||[]).join(' '),i.grade].join(' ').toLowerCase().includes(q)); }
+      if(state.sort==='newest') out.sort((a,b)=>b.createdAt-a.createdAt); if(state.sort==='oldest') out.sort((a,b)=>a.createdAt-b.createdAt); if(state.sort==='title') out.sort((a,b)=>a.title.localeCompare(b.title));
+      state.filtered = out; state.totalPages = Math.max(1,Math.ceil(out.length/state.perPage)); if(state.page>state.totalPages) state.page=state.totalPages; renderList(); }
+
+    function renderList(){ const list=document.getElementById('list'); list.innerHTML=''; const start=(state.page-1)*state.perPage; const end=start+state.perPage; const slice=state.filtered.slice(start,end); document.getElementById('page').textContent=state.page; if(slice.length===0) return list.innerHTML='<div class="muted" style="padding:18px">No hay archivos que coincidan.</div>';
+      slice.forEach(it=>{
+        const el=document.createElement('div'); el.className='item'; const thumb=document.createElement('div'); thumb.className='thumb'; thumb.textContent=it.type.toUpperCase(); const info=document.createElement('div'); info.style.flex='1'; const h=document.createElement('h3'); h.textContent = it.title || it.filename; const p=document.createElement('p'); p.textContent = `${it.course || ''} · ${it.professor || ''} · ${it.grade || ''}`;
+        const meta=document.createElement('div'); meta.className='muted'; meta.textContent = new Date(it.createdAt).toLocaleString(); const tagWrap=document.createElement('div'); (it.tags||[]).slice(0,4).forEach(t=>{ const s=document.createElement('span'); s.className='tag'; s.textContent=t; tagWrap.appendChild(s); });
+        info.appendChild(h); info.appendChild(p); info.appendChild(meta); info.appendChild(tagWrap);
+        const actions=document.createElement('div'); actions.className='actions'; const preview=document.createElement('button'); preview.className='small'; preview.textContent='Vista'; preview.onclick=async ()=>{ const rec=await getFile(it.id); const url=URL.createObjectURL(rec.blob); const w=window.open('','_blank'); if(it.type==='pdf'||it.type==='image'||it.type==='video'){ w.document.write(`<title>${rec.title}</title>`); if(it.type==='pdf') w.document.write(`<embed src="${url}" type="application/pdf" width="100%" height="100%"></embed>`); else if(it.type==='image') w.document.write(`<img src="${url}" style="max-width:100%;height:auto">`); else if(it.type==='video') w.document.write(`<video src="${url}" controls style="max-width:100%"></video>`); } else { w.document.write(`<p>Previsualización no disponible. <a href='${url}' download='${rec.filename}'>Descargar</a></p>`); } };
+        const dl=document.createElement('a'); dl.className='small'; dl.textContent='Descargar'; dl.href='#'; dl.onclick=async (e)=>{ e.preventDefault(); const rec=await getFile(it.id); const url=URL.createObjectURL(rec.blob); const a=document.createElement('a'); a.href=url; a.download=rec.filename; a.click(); };
+        const del=document.createElement('button'); del.className='small'; del.textContent='Eliminar'; del.onclick=async ()=>{ if(state.user.role!=='admin' && state.user.username!==it.uploadedBy) return alert('Solo administrador o quien subió el archivo puede eliminarlo'); if(!confirm('Eliminar archivo?')) return; await delFile(it.id); refreshFiles(); };
+        actions.appendChild(preview); actions.appendChild(dl); actions.appendChild(del); el.appendChild(thumb); el.appendChild(info); el.appendChild(actions); list.appendChild(el);
+      }); }
+
+    function populateFilters(){ const years=new Set(), courses=new Set(), professors=new Set(), grades=new Set(); state.items.forEach(i=>{ if(i.year) years.add(i.year); if(i.course) courses.add(i.course); if(i.professor) professors.add(i.professor); if(i.grade) grades.add(i.grade); }); const fy=document.getElementById('filterYear'); const fc=document.getElementById('filterCourse'); const fp=document.getElementById('filterProfessor'); const fg=document.getElementById('filterGrade'); fy.innerHTML='<option value="all">Todos los años</option>'; Array.from(years).sort((a,b)=>b-a).forEach(y=>{ const o=document.createElement('option'); o.value=y; o.textContent=y; fy.appendChild(o); }); fc.innerHTML='<option value="">Todos los cursos</option>'; Array.from(courses).sort().forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; fc.appendChild(o); }); fp.innerHTML='<option value="">Todos los profesores</option>'; Array.from(professors).sort().forEach(p=>{ const o=document.createElement('option'); o.value=p; o.textContent=p; fp.appendChild(o); }); fg.innerHTML='<option value="">Todos los grados</option>'; Array.from(grades).sort().forEach(g=>{ const o=document.createElement('option'); o.value=g; o.textContent=g; fg.appendChild(o); });
+      // also populate year select in upload form (last 10 years)
+      const ys=document.getElementById('yearSelect'); ys.innerHTML=''; const cur=new Date().getFullYear(); for(let i=0;i<12;i++){ const o=document.createElement('option'); o.value=cur-i; o.textContent=cur-i; ys.appendChild(o); }
+    }
+
+    // --- search & filter events ---
+    document.getElementById('search').addEventListener('input', e=>{ state.filters.q = e.target.value; state.page=1; applyFilters(); });
+    document.getElementById('filterYear').addEventListener('change', e=>{ state.filters.year = e.target.value; state.page=1; applyFilters(); });
+    document.getElementById('filterCourse').addEventListener('change', e=>{ state.filters.course = e.target.value; state.page=1; applyFilters(); });
+    document.getElementById('filterProfessor').addEventListener('change', e=>{ state.filters.professor = e.target.value; state.page=1; applyFilters(); });
+    document.getElementById('filterGrade').addEventListener('change', e=>{ state.filters.grade = e.target.value; state.page=1; applyFilters(); });
+    document.getElementById('sortBy').addEventListener('change', e=>{ state.sort = e.target.value; applyFilters(); });
+    document.getElementById('perPage').addEventListener('change', e=>{ state.perPage = Number(e.target.value); state.page=1; applyFilters(); });
+    document.getElementById('prevPage').addEventListener('click', ()=>{ if(state.page>1){ state.page--; renderList(); } });
+    document.getElementById('nextPage').addEventListener('click', ()=>{ if(state.page < state.totalPages){ state.page++; renderList(); } });
+
+    // --- after login ---
+    async function afterLogin(){ document.getElementById('authPanel').style.display='none'; document.getElementById('mainApp').style.display='block'; document.getElementById('uploadedBy').textContent = state.user.username; document.getElementById('userArea').textContent = `${state.user.username} (${state.user.role})`;
+      if(state.user.role==='admin') document.getElementById('adminPanel').style.display='block'; else document.getElementById('adminPanel').style.display='none'; await refreshFiles(); renderAdminUsers(); }
+
+    // --- initial setup ---
+    (async ()=>{
+      await openDB();
+      // if no users exist, create default admin: admin / admin
+      const users = await getAllUsers(); if(!users.length){ await addUser({username:'admin',password:hashPass('admin'),role:'admin'}); }
+      // restore session
+      const s = localStorage.getItem('repo_session'); if(s){ state.user = JSON.parse(s); afterLogin(); } else { document.getElementById('authPanel').style.display='block'; document.getElementById('mainApp').style.display='none'; }
+      // set defaults
+      state.perPage = Number(document.getElementById('perPage').value);
+    })();
+  </script>
+</body>
+</html>
+
